@@ -14,10 +14,13 @@ Active project: [03 — Crate-pushing](projects/03-crate-pushing/LEARNING.md).
 ## Tooling
 
 - Learner-reported environment: Windows 11, Godot 4.7.2 .NET editor, and .NET SDK `11.0.100-rc.3.26522.148`.
+- Learner clarification: the .NET 10 SDK is required to load and compile the C# projects in Godot, not just for initial project generation. Keep it installed alongside the .NET 11 SDK, which supplies the C# 15 preview language features used by the projects. These roles are learner-reported, not independently verified.
+- Shared C# configuration is now in [godot-projects/Directory.Build.props](https://github.com/janno-p/godot-projects/blob/main/Directory.Build.props): preview language version, implicit usings, nullable reference checks, and SDK preview-message suppression. Source inspection confirmed both project files no longer duplicate these settings and no `global.json` remains in the source repository. The learner reports SDK pinning is unnecessary; effective SDK selection and builds have not been independently rechecked.
+- At the learner's explicit request, union support types were consolidated unchanged into [godot-projects/shared/System.Runtime.CompilerServices/](https://github.com/janno-p/godot-projects/tree/main/shared/System.Runtime.CompilerServices). Root `Directory.Build.props` automatically includes them as linked source for inheriting projects; local duplicate definitions and unreferenced UID sidecars were removed. Static XML/path/source-uniqueness checks passed. Both build attempts were blocked before compilation because the `dotnet.exe` available to the assistant reports no installed SDKs; this does not supersede the learner's reported tooling setup.
 - C#/.NET is the chosen engine-learning route. The preview SDK is intentional; preserve that choice. The initial project-generation workaround and its limits are in [01 — Basic Structure](projects/01-basic-structure/LEARNING.md#project-generation-workaround).
 - The [official C# prerequisites](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#prerequisites) describe the separate SDK requirement.
 - Recorded platform tradeoff: Godot 4 C# projects cannot export to the web. Recheck support before planning browser delivery; GDScript is an alternative. F# or Rust integration remains a possible later exploration, not an agreed next task.
-- Godot source base: `/mnt/d/Janno/Godot` (Windows: `D:\Janno\Godot`). This repository holds coaching notes; the source projects stay separate.
+- Repositories: [godot-learning](https://github.com/janno-p/godot-learning) holds coaching notes; [godot-projects](https://github.com/janno-p/godot-projects) holds the separate Godot source projects. Use GitHub links for cross-repository references and relative links within these learning notes.
 
 ## Project index
 

@@ -2,7 +2,7 @@
 
 A game development learning journal using **Godot and C#**, covering gameplay programming, game design, player feedback, testing, and releasing small games.
 
-This repository contains coaching notes, exercises, decisions, and project histories. Godot source projects are maintained separately.
+This repository contains coaching notes, exercises, decisions, and project histories. Godot source projects are maintained separately in [godot-projects](https://github.com/janno-p/godot-projects).
 
 ## Projects
 

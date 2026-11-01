@@ -5,7 +5,7 @@
 Version one is complete, including Windows export, packaging, and a relocated-package launch by learner report. This was the first game, following the Basic Structure sandbox.
 
 - Godot project name: `Lights Out`.
-- Source: `/mnt/d/Janno/Godot/lights-out` (Windows: `D:\Janno\Godot\lights-out`).
+- Source: [godot-projects/02-lights-out](https://github.com/janno-p/godot-projects/tree/main/02-lights-out).
 - Source and export artifacts were inspected. Windows execution and gameplay checks were performed by the learner, not independently by the assistant.
 
 ## Agreed brief
@@ -30,11 +30,13 @@ It is separate from the changing status label.
 ## Technical decisions
 
 - C# with a flat, row-major board model; UI labels and styles are outputs of that model.
-- The learner intentionally chose a preview `LightState` union with `On`/`Off` records instead of the suggested booleans. Supporting compiler types are intentional learner work, not files to remove as unfamiliar scaffolding.
-- The inspected project targets desktop `net8.0` with preview C# enabled. The SDK selected for this game's build was not independently checked; the sandbox's SDK-selection workaround is documented in [01 — Basic Structure](../01-basic-structure/LEARNING.md#project-generation-workaround).
+- The learner intentionally chose a preview `LightState` union with `On`/`Off` records instead of the suggested booleans. At their explicit request, supporting types `IUnion` and `UnionAttribute` now live unchanged in the source repository's [shared/System.Runtime.CompilerServices/](https://github.com/janno-p/godot-projects/tree/main/shared/System.Runtime.CompilerServices) folder, automatically included as linked source through root `Directory.Build.props`. The local duplicates and unreferenced UID sidecars were removed; these support types remain intentional, not disposable scaffolding.
+- The inspected project targets desktop `net8.0`. Shared preview C#, implicit usings, nullable checks, and SDK preview-message suppression now live in the source repository's root [Directory.Build.props](https://github.com/janno-p/godot-projects/blob/main/Directory.Build.props), rather than in each project file. No `global.json` remains in the source repository; SDK pinning is unnecessary by learner report. Current SDK requirements are in the [shared tooling notes](../../LEARNING.md#tooling); effective SDK selection and builds after this change have not been independently checked.
 - Scene setup and signal subscriptions happen once. A shared reset path restores state and refreshes the UI without reconnecting handlers.
 
 ## Verification and limitations
+
+Static checks passed for the shared union-support configuration, paths, unchanged type definitions, and absence of duplicates. The build attempt after this change was blocked before compilation because the assistant-accessible `dotnet.exe` reports no installed SDKs. This is an assistant-environment limitation, not evidence that the learner's reported SDK installation is missing.
 
 Source inspection and learner-reported exercises covered corner/edge/center moves without wrapping, applying a move twice to restore the board, model-based all-Off detection, post-win input blocking, and repeated Restart behavior.
 
@@ -45,10 +47,10 @@ No unfamiliar tester was available. A solo screen audit identified the absent cl
 ## Export and package
 
 - Inspected preset: Windows Desktop, x86_64.
-- Export directory: `/mnt/d/Janno/Godot/lights-out/dist`.
+- Export output: the project's ignored `dist/` folder; generated artifacts are not stored in the GitHub repository.
 - Required contents: `Lights Out.exe`, `Lights Out.pck`, and `data_Lights Out_windows_x86_64/`, kept together.
 - Learner reports launching the export with the editor closed and checking play → win → restart.
-- Learner zipped the dist folder, extracted it under `/mnt/c/Temp` (Windows `C:\Temp`), and reports the extracted application works.
+- Learner zipped the dist folder, extracted it to a temporary directory outside the project, and reports the extracted application works.
 - ZIP path/name and exact extracted executable subpath were not supplied. The assistant did not inspect the archive or execute the Windows binary.
 - This was a same-machine portability check, not a clean-PC compatibility test. Nothing has been publicly published.
 
