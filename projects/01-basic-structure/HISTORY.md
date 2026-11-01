@@ -1,0 +1,15 @@
+# 01 — Basic Structure history
+
+## Completion observations
+
+Sandbox foundations complete by learner report and source inspection: scenes/nodes, script attachment, `_Ready()`, node references, state-driven UI updates, editor-connected signals, and container-based layout. The `CenterContainer` uses Full Rect, both controls are under the VBoxContainer, the label lookup matches the new hierarchy, and the button connection still targets `OnButtonPressed`. Runtime behavior has not been independently run by the assistant.
+
+## Chronological log
+
+- 2026-10-31: Learner described their background, interests, and preference to do the work themselves. Established this workspace's coaching notes and journal. No game project has been created or inspected.
+- 2026-10-31: Learner shared language preferences, prior engine exposure, and that Godot is not installed. Recommended C#/.NET, explained the web-export tradeoff, and assigned installation as the first exercise.
+- 2026-10-31: Installation exercise completed by learner report: Windows 11, Godot 4.7.2, and .NET SDK `11.0.100-rc.3.26522.148`. Learner intentionally chose the preview SDK and plans to target `net8.0`. Assigned a minimal scene and C# build/run as the next exercise; its outcome is pending.
+- 2026-10-31: Learner supplied the external project location and reported a missing `.csproj`. Read-only inspection confirmed the script, label, and script attachment, but no C# project file in the root. Proposed explicit solution generation as the next setup check; resolution is pending.
+- 2026-10-31: Learner resolved missing C# project generation by installing .NET 10, then returned to .NET 11 through `global.json` and reported a successful launch. Inspection confirmed the generated project and SDK-selection file. Next exercise is a button-driven counter, conditional on confirming the original label/startup-output checks.
+- 2026-10-31: Learner completed the counter and renamed the handler to `OnButtonPressed`. Source inspection confirmed the matching scene connection and counter/display logic. Assigned responsive container-based layout as the next exercise; outcome pending.
+- 2026-10-31: Learner found the Full Rect preset and reported the layout exercise complete. Source inspection confirmed the container hierarchy, full-rect anchors, updated label path, and preserved signal connection. Assigned choosing and briefly scoping the first game as the next exercise; no game has been selected yet.

@@ -11,6 +11,9 @@
 
 ## Continuity
 
-- When starting or resuming coaching, read `LEARNING.md` for the learner's background, decisions, and current step.
-- Maintain `LEARNING.md` as decisions are made and exercises are completed. Distinguish proposals from agreed plans, and reported completion from unverified assumptions.
+- When starting or resuming coaching, read the root `LEARNING.md`, then the active project's linked `LEARNING.md` before assigning or resuming work. When switching projects, read that project's `LEARNING.md` first.
+- Read a project's `HISTORY.md` when tracing past decisions or exercises. Its entries record the state at the time; the project's `LEARNING.md` owns current status.
+- Keep shared learner background, tooling, the project index, and the active-project pointer in the root `LEARNING.md`. Keep each project's brief, decisions, progress, and current exercise (including purpose and completion check) in its own `LEARNING.md`; append dated project events to its `HISTORY.md`.
+- Distinguish proposals from agreed plans, and learner-reported completion from source/artifact inspection or independently verified runtime behavior.
+- Number project-note folders chronologically as `projects/NN-slug/`, using zero-padded numbers and including the initial sandbox. Retain existing numbers when adding projects. These are notes folders, separate from the learner-named Godot source folders.
 - Workspace notes may be maintained directly; the coaching agreement above governs game implementation.
