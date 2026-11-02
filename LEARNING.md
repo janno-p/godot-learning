@@ -1,6 +1,6 @@
 # Game development learning
 
-Active project: [03 — Crate-pushing](projects/03-crate-pushing/LEARNING.md).
+Active project: [04 — Turn-based duel](projects/04-turn-based-duel/LEARNING.md).
 
 ## Learner
 
@@ -9,6 +9,7 @@ Active project: [03 — Crate-pushing](projects/03-crate-pushing/LEARNING.md).
 - Engine experience: experimented with an engine previously, then refreshed Godot foundations in Basic Structure.
 - Interests: puzzle, turn-based strategy, and simulation games. Long-term project remains open.
 - After Lights Out: learned a few Godot usage details, reported no current uncertainties, and enjoyed coding most. Use that feedback to emphasize gameplay programming without dropping design, feedback, testing, and releasing.
+- After Crate-pushing: node grouping was new, and mapping between grid cells and screen coordinates was interesting. Reports no current uncertainties and enjoys progression toward more complicated concepts. Build incrementally on established skills, emphasizing new conceptual depth rather than merely adding content.
 - Tester availability: no external tester available as of 2026-11-01. A solo clarity audit was used instead; it is not equivalent to fresh-eyes feedback.
 
 ## Tooling
@@ -20,7 +21,7 @@ Active project: [03 — Crate-pushing](projects/03-crate-pushing/LEARNING.md).
 - C#/.NET is the chosen engine-learning route. The preview SDK is intentional; preserve that choice. The initial project-generation workaround and its limits are in [01 — Basic Structure](projects/01-basic-structure/LEARNING.md#project-generation-workaround).
 - The [official C# prerequisites](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#prerequisites) describe the separate SDK requirement.
 - Recorded platform tradeoff: Godot 4 C# projects cannot export to the web. Recheck support before planning browser delivery; GDScript is an alternative. F# or Rust integration remains a possible later exploration, not an agreed next task.
-- Repositories: [godot-learning](https://github.com/janno-p/godot-learning) holds coaching notes; [godot-projects](https://github.com/janno-p/godot-projects) holds the separate Godot source projects. Use GitHub links for cross-repository references and relative links within these learning notes.
+- Repositories: [godot-learning](https://github.com/janno-p/godot-learning) holds coaching notes; [godot-projects](https://github.com/janno-p/godot-projects) holds the separate Godot source projects. The local source checkout is `/mnt/d/Janno/Godot`, supplied by the learner and inspected on 2026-11-02. Use GitHub links for cross-repository references and relative links within these learning notes.
 
 ## Project index
 
@@ -28,6 +29,7 @@ Active project: [03 — Crate-pushing](projects/03-crate-pushing/LEARNING.md).
 | --- | --- | --- |
 | 01 | [Basic Structure](projects/01-basic-structure/LEARNING.md) | Foundations sandbox complete |
 | 02 | [Lights Out](projects/02-lights-out/LEARNING.md) | First game: version one and reflection complete |
-| 03 | [Crate-pushing](projects/03-crate-pushing/LEARNING.md) | Second game: concept agreed, level sketch pending |
+| 03 | [Crate-pushing](projects/03-crate-pushing/LEARNING.md) | Second game: version one and reflection complete |
+| 04 | [Turn-based duel](projects/04-turn-based-duel/LEARNING.md) | Third game: direction agreed; first turn trace pending |
 
 Each project's `LEARNING.md` owns its brief, decisions, progress, verification limits, and current exercise. Its `HISTORY.md` preserves past milestones for reference.
