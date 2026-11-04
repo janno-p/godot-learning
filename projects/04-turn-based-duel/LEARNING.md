@@ -6,7 +6,7 @@ Version one and reflection are complete. The learner exported to `/mnt/d/Janno/E
 
 The focused snapshots/undo/redo extension is now complete by source review and learner-reported checks. Two histories preserve the state being left, restore snapshots directly, safely handle empty history, and discard redo only on new accepted gameplay actions. Restart clears both histories; presentation is derived from state. No independent runtime test, new export, or later commit of the extension has been verified.
 
-The learner accepted Godot tweens and asynchronous turn sequencing in this existing project on 2026-11-04. The current exercise animates each move, awaits its completion before handing over the turn, and gates input throughout the complete player/enemy cycle. The assigned timing/input policies are recorded below; implementation and runtime checks are pending. Retain the established exercise size and focus on new concepts; tactical design remains optional.
+Godot tweens and asynchronous turn sequencing are complete by source review and learner-reported follow-up completion on 2026-11-04. Each action now awaits its own movement before handing over the turn; blocked commands and immediate attacks create no tween. The nonqueueing semaphore gate spans the full player/enemy cycle, with exception reporting at the async callback boundary and release in `finally`. Idle undo/redo still restore snapshots immediately. No independent build/runtime test or newer export/checkpoint was verified. The learner has accepted parallel attack feedback as the next focused topic; its current exercise adds a composed lunge/hit flash and awaits its completion before handoff. Implementation and checks are pending. Retain the established exercise size and focus on new concepts; tactical design remains optional.
 
 The learner created and supplied `/mnt/d/Janno/Godot/04-turn-based-duel/` in the separate `godot-projects` source repository. The source folder is learner-chosen and happens to match the numbered notes-folder label. The Godot application title is `Turn Based Duel`. Source reference: [04-turn-based-duel](https://github.com/janno-p/godot-projects/tree/main/04-turn-based-duel). The coach has inspected the local project but has not created or edited game source or verified a remote push.
 
@@ -364,7 +364,7 @@ The learner accepted **Godot tweens and asynchronous turn sequencing** in the ex
 
 **Completion check — met:** the learner accepted this direction. The first exercise and its policies follow.
 
-## Current exercise — await animated movement through a whole turn cycle
+## Reviewed exercise — await animated movement through a whole turn cycle
 
 Make each player/enemy move take approximately **0.2 seconds**, using a fresh Godot tween to animate the actor's `Position` to `CellToScreen(destination)`.
 
@@ -390,7 +390,85 @@ Make each player/enemy move take approximately **0.2 seconds**, using a fresh Go
 4. From a fresh run, `Up, Up, Up, Right`, waiting after accepted commands: the third Up is blocked, and Right still works. End at player `(2, 0)`, enemy `(2, 1)`, HP 3/3.
 5. From a fresh run, four Rights (waiting for each cycle) still win at HP 1/0 with no defeated-enemy response. U/Y can leave and restore the result; R works once resolution is finished.
 
-Report results for source review. Implementation and runtime completion are pending.
+### Async coaching clarification (2026-11-04)
+
+The learner asked where signal awaiting fits, questioned `async void`, and checked their understanding of overlapping handler invocations. Explained that `ToSignal` makes tween completion awaitable, helpers return `Task`, and callers must await them through the chain. The required `void` Godot callback is the narrow async boundary: awaited helper failures can be caught there, while `finally` performs cleanup rather than exception handling. Godot can invoke the callback again during suspension; this tween flow normally involves main-thread reentrancy, not simultaneous execution on worker threads. A guard must exclude all relevant input throughout the cycle.
+
+### Submission review (2026-11-04)
+
+- The learner reported `Done`. Inspected `Main.cs`, `Actor.cs`, and input settings. No per-scenario runtime evidence was supplied, and the coach did not build or run the game. The submission does not yet meet the action-completion timing policy.
+- `_UnhandledInput` uses a one-permit `SemaphoreSlim` and `WaitAsync(0)` before any input handling. The zero timeout rejects busy invocations without queueing; successful acquisition is paired with release in `finally`, including early returns. This is a valid implementation of the input gate; a boolean replacement is not required.
+- `UpdateLabels()` is separate from `UpdateActors()`. Startup and idle undo/redo refresh both; normal action resolution refreshes labels without snapping the actors. History capture, branching, and restoration remain at the existing boundaries.
+- `PlayerAction()` and `EnemyAction()` are still synchronous and both run before `await AnimateActors()`. Thus both logical actions and normal turn handoffs finish before either visual move starts. `AnimateActors()` appends player and enemy position tweeners to one default-sequential tween, so visual order alone can appear correct despite the premature gameplay handoffs.
+- Both tweeners always use 0.2 seconds, even when their actors have not moved. A blocked directional command or an attack-only cycle therefore still incurs approximately 0.4 seconds of input exclusion. Invalid commands preserve gameplay/history but do not immediately leave input ready, as required.
+- The callback has `try/finally` but no `catch`. The permit is released on an awaited failure, but the exception still escapes the `async void` boundary; this does not implement the exception-reporting guidance discussed above.
+
+## Completed exercise — align action completion with animated movement
+
+Revise the existing flow so each moving actor completes its animation before handing over the turn.
+
+- Make the player/enemy action helpers awaitable and await them in order from the input callback.
+- In each movement branch, commit that actor's logical destination, create and await its movement tween, then perform the normal turn handoff. A small single-actor movement helper can share the tween code. Replace the unconditional end-of-cycle two-actor animation with these movement-only waits.
+- Bounds-rejected input and immediate attacks create no movement tween. Preserve terminal-result guards and whole-cycle history boundaries.
+- Retain the working zero-timeout semaphore gate, its `finally` release, and immediate idle snapshot restoration. Catch/report awaited failures at the `async void` boundary; cleanup alone does not observe them.
+
+**Purpose:** make an actor action's completion include its visual movement, keeping logical handoff and asynchronous completion aligned and avoiding artificial delays when nothing moves.
+
+**Completion checks:**
+
+1. Temporarily use 0.8-second moves. From a fresh run, Right must log the player-to-enemy handoff and `Enemy moves` only after the player arrives; the return to `PlayerTurn` must occur only after the enemy arrives. Inputs during both movements remain discarded. End at player `(2, 2)`, enemy `(3, 2)`, HP 3/3.
+2. From a fresh run, use `Up, Up`, waiting for each cycle, then press blocked Up followed promptly by Right. Right must be accepted without a stationary-animation delay; end at player `(2, 0)`, enemy `(2, 1)`, HP 3/3. Attack-only cycles likewise introduce no stationary-animation wait.
+3. Confirm idle undo/redo still snap immediately and the four-right win still allows undo/redo/restart after resolution. Restore 0.2-second movement duration.
+
+**Completion check — met (2026-11-04):** the learner reported the follow-up done. Source inspection supports the corrected action/arrival order, rejection without stationary-animation delay, and preserved input/history/terminal behavior. Runtime completion is learner-reported; no per-scenario logs or independent build/run were supplied/performed.
+
+### Follow-up implementation review (2026-11-04)
+
+- `_UnhandledInput` now awaits `PlayerAction()` and then `EnemyAction()`. Both return `Task`; movement branches commit the actor's cell and await the shared `AnimateActor()` before calling `ChangeTurn()`.
+- `AnimateActor()` creates a fresh single-actor tween and awaits its `Finished` signal. `AnimationSpeed` is restored to 0.2 seconds. The unconditional two-actor post-cycle animation is removed.
+- Player bounds validation returns before history capture or any tween. The unchanged enemy-turn guard prevents a response to rejected input or a fatal player attack. Attacks complete synchronously with no animation wait.
+- Both actions choose a normal next turn or `FinishedDuel` and apply it through `ChangeTurn()`, then print state and refresh labels. Fatal results therefore remain terminal and visible; no defeated-enemy response or return to player control occurs after defeat.
+- The zero-timeout semaphore still covers restart/history handling and the full awaited cycle. A `catch (Exception)` reports action failures through `GD.PushError`; `finally` releases the permit. This confirms reporting/cleanup structure, not tested recovery from injected failures.
+- Startup and idle undo/redo still snap actor positions through `UpdateActors()`. Snapshots contain logical cells, HP, and immutable turn/result data; resolution bookkeeping remains outside history. Reviewed `Main.cs`, `GameState.cs`, `HistoryEntry.cs`, and `Actor.tscn` without editing game source.
+
+## Completed checkpoint — choose parallel attack feedback
+
+The learner accepted parallel attack feedback on 2026-11-04. Introduce parallel versus sequential tween composition through a short attacker lunge and target hit flash that overlap, with the action awaiting completion of the full effect. This builds on sequential movement while adding readable combat feedback and temporary visual transforms separate from logical grid positions.
+
+**Purpose:** choose a focused extension that teaches simultaneous animation tracks and separation of temporary presentation from grid placement.
+
+**Completion check — met:** the learner accepted the proposal. Inspection confirms the existing actor scene has a `Polygon2D` child, and the two actor roots carry their cyan/orange tints. The assignment below reuses these nodes; no game source was edited by the coach.
+
+## Current exercise — compose parallel attack feedback
+
+Give each player/enemy attack a two-phase visual effect, using one fresh composed tween per attack:
+
+| Phase | Attacker's `Polygon2D` | Target's `Polygon2D` |
+| --- | --- | --- |
+| First 0.1 seconds | Move its local position 12 pixels toward the target from its resting position | Tween `SelfModulate` toward a dark gray, for example `(0.3, 0.3, 0.3, 1)` |
+| Next 0.1 seconds | Return to its original local position | Return to its original `SelfModulate` |
+
+- Run both properties in each phase in parallel, and the two phases sequentially. Await the entire tween's `Finished` signal before the attack action completes. Use the same behavior for both actors.
+- Animate the visible child for the lunge. The actor root remains at its cell position, and attacks change neither logical cell. Use the logical attacker-to-target direction so the effect works horizontally and vertically.
+- Use the target child's `SelfModulate` for the flash. Its modulation multiplies the existing parent tint; a darkening pulse remains visible for both cyan and orange actors. Restore the original values so offsets/tints do not accumulate across attacks or enter history snapshots.
+- Apply the one damage point at attack start and refresh the HP display. If fatal, record and display `FinishedDuel` immediately, then finish the effect under the existing input gate without a normal handoff or enemy response. If nonfatal, retain the acting turn until the full effect finishes, then hand over the turn. This extends the previous instantaneous-attack policy with awaited feedback while preserving immediate damage/defeat handling.
+- Keep the semaphore held across the full player/enemy cycle, now including attack effects. Arrows and R/U/Y during effects remain discarded. Idle undo/redo restore snapshots without replaying effects, when both visuals are already at rest.
+
+### Focused hints
+
+- `Tween.Parallel()` adds the next tweener alongside the preceding one. Compose two parallel pairs in sequence; awaiting separate effects one after another would make them sequential.
+- Useful property names are `Node2D.PropertyName.Position` and `CanvasItem.PropertyName.SelfModulate`. The existing `Polygon2D` can serve as the visual node.
+- Capture resting visual values before constructing the tween. A shared `Task`-returning attack-feedback helper can keep the composition consistent between the two actors; damage and turn policy remain in the coordinating action logic.
+
+**Purpose:** combine simultaneous visual tracks with sequential phases, await the whole composed effect, and keep temporary presentation independent of authoritative grid state.
+
+**Completion checks:** temporarily use 0.4 seconds per phase for observation, then restore 0.1 seconds:
+
+1. From a fresh run, Right moves into adjacency. A second Right makes the player lunge while the enemy darkens; both return to rest before the enemy's corresponding attack effect begins. Both actors stay in their logical cells, and the cycle ends at HP 2/2. Also check a vertical attack, for example Down after `Up, Up, Right` from a fresh run.
+2. Press arrows and R/U/Y during each actor's attack effect, including the return phase. Inputs are discarded; repeated attacks leave no visual offset or tint drift. Four accepted Rights from a fresh run still win at HP 1/0, with the final player attack effect completing and no defeated-enemy response.
+3. After the win settles, U restores the adjacent 1/1-HP state and Y restores the 1/0 win. Both visuals stay at rest with original tints, and neither navigation replays an attack effect.
+
+Report the results for source review. Implementation and runtime completion are pending.
 
 ## History
 

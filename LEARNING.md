@@ -32,6 +32,6 @@ Active project: [04 — Turn-based duel](projects/04-turn-based-duel/LEARNING.md
 | 01 | [Basic Structure](projects/01-basic-structure/LEARNING.md) | Foundations sandbox complete |
 | 02 | [Lights Out](projects/02-lights-out/LEARNING.md) | First game: version one and reflection complete |
 | 03 | [Crate-pushing](projects/03-crate-pushing/LEARNING.md) | Second game: version one and reflection complete |
-| 04 | [Turn-based duel](projects/04-turn-based-duel/LEARNING.md) | Version one and snapshot undo/redo complete; tween/async-turn exercise assigned |
+| 04 | [Turn-based duel](projects/04-turn-based-duel/LEARNING.md) | Version one, snapshot undo/redo, and awaited movement complete; parallel attack-feedback exercise assigned |
 
 Each project's `LEARNING.md` owns its brief, decisions, progress, verification limits, and current exercise. Its `HISTORY.md` preserves past milestones for reference.
