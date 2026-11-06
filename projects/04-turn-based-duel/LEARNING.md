@@ -6,7 +6,7 @@ Version one and reflection are complete. The learner exported to `/mnt/d/Janno/E
 
 The focused snapshots/undo/redo extension is now complete by source review and learner-reported checks. Two histories preserve the state being left, restore snapshots directly, safely handle empty history, and discard redo only on new accepted gameplay actions. Restart clears both histories; presentation is derived from state. No independent runtime test, new export, or later commit of the extension has been verified.
 
-Godot tweens and asynchronous turn sequencing are complete by source review and learner-reported follow-up completion on 2026-11-04. Each action now awaits its own movement before handing over the turn; blocked commands and immediate attacks create no tween. The nonqueueing semaphore gate spans the full player/enemy cycle, with exception reporting at the async callback boundary and release in `finally`. Idle undo/redo still restore snapshots immediately. No independent build/runtime test or newer export/checkpoint was verified. The learner has accepted parallel attack feedback as the next focused topic; its current exercise adds a composed lunge/hit flash and awaits its completion before handoff. Implementation and checks are pending. Retain the established exercise size and focus on new concepts; tactical design remains optional.
+Godot tweens and asynchronous turn sequencing are complete, including parallel attack feedback by final source review and learner-reported completion on 2026-11-06. Both attack branches apply damage before the effect; fatal attacks also commit/display `FinishedDuel` immediately. Movement and nonfatal attacks hand over after visual completion, and fatal results are retained. Two-phase child-local lunges and `SelfModulate` flashes use logical-cell direction. The nonqueueing semaphore spans the whole player/enemy cycle, with exception reporting and release in `finally`. Logical cells live in `Actor.GridPosition`, with initialization, movement, and snapshots updated consistently; idle undo/redo restore snapshots immediately. Custom health-change signals are also complete by source review and learner report on 2026-11-06: the attributed delegate is inside `Actor`, HP stores changed values before `EmitSignal`, and `Main` subscribes once per actor to refresh labels. Initialization, damage, and snapshot restoration use the same setter, with equal assignments silent. Startup, turn/result, and final restoration refreshes still cover their respective boundaries. Runtime completion is learner-reported; no notification logs, independent build/run, or newer export/checkpoint were verified. The learner accepted hit-sound feedback on 2026-11-06. The current exercise adds a damage-specific signal and shared `AudioStreamPlayer` so attacks play a short sound while snapshot restoration triggers no new playback. Implementation and listening checks are pending. Retain the established exercise size and focus on new concepts; tactical design remains optional.
 
 The learner created and supplied `/mnt/d/Janno/Godot/04-turn-based-duel/` in the separate `godot-projects` source repository. The source folder is learner-chosen and happens to match the numbered notes-folder label. The Godot application title is `Turn Based Duel`. Source reference: [04-turn-based-duel](https://github.com/janno-p/godot-projects/tree/main/04-turn-based-duel). The coach has inspected the local project but has not created or edited game source or verified a remote push.
 
@@ -439,7 +439,7 @@ The learner accepted parallel attack feedback on 2026-11-04. Introduce parallel 
 
 **Completion check — met:** the learner accepted the proposal. Inspection confirms the existing actor scene has a `Polygon2D` child, and the two actor roots carry their cyan/orange tints. The assignment below reuses these nodes; no game source was edited by the coach.
 
-## Current exercise — compose parallel attack feedback
+## Reviewed exercise — compose parallel attack feedback
 
 Give each player/enemy attack a two-phase visual effect, using one fresh composed tween per attack:
 
@@ -468,7 +468,158 @@ Give each player/enemy attack a two-phase visual effect, using one fresh compose
 2. Press arrows and R/U/Y during each actor's attack effect, including the return phase. Inputs are discarded; repeated attacks leave no visual offset or tint drift. Four accepted Rights from a fresh run still win at HP 1/0, with the final player attack effect completing and no defeated-enemy response.
 3. After the win settles, U restores the adjacent 1/1-HP state and Y restores the 1/0 win. Both visuals stay at rest with original tints, and neither navigation replays an attack effect.
 
-Report the results for source review. Implementation and runtime completion are pending.
+### Submission review (2026-11-06)
+
+- The learner reported `Done`. Read-only inspection covered `Main.cs`, `Actor.cs`, `Actor.tscn`, `Main.tscn`, `GameState.cs`, and `HistoryEntry.cs`. No per-scenario runtime results were supplied and no independent build/run was performed. The submission does not yet meet the full effect/timing policy.
+- Both attack branches await the shared `AnimateAttack()` helper before handing over the turn. Its fresh tween groups the outward lunge and darkening in parallel, and the existing semaphore remains held across both actors' effects. The movement duration is 0.2 seconds and the attack phase duration is 0.1 seconds.
+- The helper currently moves the attacker root by 18 pixels using rendered root positions for direction, and darkens the target root's `Modulate`. It captures and restores those root values, leaving logical cells unchanged, but does not use the polygon children's local `Position` and `SelfModulate` as assigned. The reusable polygon child and cyan/orange root tints remain available in the scenes.
+- Only the outward phase is tweened. After awaiting it, direct property assignments immediately reset position and tint; there is no animated parallel return phase.
+- `PlayerAction()` and `EnemyAction()` call `DealDamage()` after awaiting the effect. Defeat selection, actual state transition, and label refresh consequently also occur after the effect, rather than recording damage and a fatal result at attack start. The existing enemy-turn guard still prevents a defeated enemy response once the delayed result is recorded.
+- History remains based on logical cells, HP, and the immutable turn/result state. Idle undo/redo restore data and root positions directly without invoking attack effects. These are source observations, not independent runtime verification.
+
+## Reviewed exercise — complete the attack effect and its timing
+
+Revise the submitted attack feedback to finish the assigned composition and action boundaries:
+
+- Animate the attacker's `Polygon2D.Position` locally and the target's `Polygon2D.SelfModulate`. Capture their resting values. Keep actor roots at their cell positions, and use the logical attacker-to-target cell direction for the 12-pixel lunge.
+- Append an animated return phase to the same tween before awaiting `Finished`: outward lunge/darkening in parallel for 0.1 seconds, then return-position/return-color in parallel for 0.1 seconds. With default sequential tween mode, a normal next tweener starts the next phase; `Parallel()` pairs the other property with it. Direct assignments after the await currently make the return instantaneous.
+- In both attack branches, apply damage before awaiting feedback. Record an actual `FinishedDuel` immediately if fatal and refresh labels at attack start. Await the full effect; only a nonfatal attack performs the normal handoff afterward. Ensure the end-of-action flow cannot overwrite a finished result. The existing semaphore continues to cover the entire cycle.
+
+**Purpose:** complete parallel tracks across two sequential phases, separate temporary visuals from actor placement, and distinguish immediate gameplay consequences from awaited presentation completion.
+
+**Completion checks:** temporarily use 0.4 seconds per phase, then restore 0.1 seconds:
+
+1. After an initial Right move, attack with Right. Enemy HP drops as the player effect starts; the player lunges while the enemy darkens, then both smoothly return before the enemy response. The enemy attack updates player HP at its own start. End at HP 2/2. Check a vertical attack with `Up, Up, Right, Down` from a fresh run; roots remain at their logical cells throughout both directions.
+2. Continue the right-only encounter to win at HP 1/0. `You win` appears at the start of the fatal effect, the effect finishes fully, and the enemy does not respond. Arrows and R/U/Y during outward and return phases are discarded. Repeated attacks leave no visual offset/tint drift.
+3. Once the win settles, U restores adjacent HP 1/1 and Y restores the HP 1/0 win, with resting visuals and no replayed effects.
+
+### Follow-up submission review (2026-11-06)
+
+- The learner again reported `Done`. Inspected `Main.cs`, `Actor.cs`, `Actor.tscn`, `HistoryEntry.cs`, and `GameState.cs`. No per-scenario runtime evidence was supplied and no independent build/run was performed; the exercise remains open on the attack-start state/display requirement.
+- `AnimateAttack()` now obtains both actors' polygon children and composes a parallel outward position/color pair followed by a parallel return pair in one tween. The whole tween is awaited, resting child values are captured, and root positions remain unchanged during attacks. The phase duration is 0.1 seconds. The learner's 18-pixel lunge can remain as visual tuning; amplitude is not the learning blocker.
+- Both attack branches now call `DealDamage()` before awaiting the effect. However, their fatal branches only assign a local `nextTurn`; `_gameState` is unchanged until the post-await `ChangeTurn(nextTurn)`. `UpdateLabels()` is also still post-await, so HP and the result display lag behind the logical damage. Settled outcomes and the defeated-enemy guard remain correct, but the required immediate result recording/display is not yet implemented.
+- The learner moved logical cells into `Actor.GridPosition`. Startup, player candidate validation, enemy pursuit, snapshot capture/restoration, immediate root placement, and movement tween destinations consistently use these properties. Snapshots still contain independent values rather than actor references.
+- The attack helper still derives direction from rendered root positions and tweens the child's `Modulate`. Settled root positions and the polygon's lack of children make these visually equivalent in the current scene, but the assigned logical-direction and `SelfModulate` choices remain small follow-up items to express the intended state source and flash scope.
+- The nonqueueing semaphore, catch/finally boundary, turn guards, and settled undo/redo paths remain intact by source inspection. Runtime input exclusion, smoothness, and restoration are not independently verified.
+
+## Reviewed exercise — distinguish immediate results from delayed handoffs
+
+Finish the existing attack-feedback exercise, focusing on the different transition times for a fatal result and a normal handoff. The original follow-up required publishing attack consequences before awaiting; the latest review below confirms that portion and identifies an early-handoff regression.
+
+- In both attack branches, apply any fatal `FinishedDuel` to the actual game state before `await AnimateAttack(...)`. Assigning `nextTurn` alone only stores a future choice. Refresh HP/result labels before the await for every attack.
+- A nonfatal attack retains the acting turn through the effect and hands over afterward. A fatal attack still awaits the full effect under the input gate, but never performs a normal handoff or lets the end-of-method flow overwrite the finished result.
+- Movement likewise retains the acting turn until arrival. Refresh labels after a delayed normal handoff as well as at attack start.
+
+**Purpose:** commit authoritative state at the appropriate boundary: damage/defeat immediately, normal turn ownership after the acting actor's visual completion.
+
+### Latest submission review (2026-11-06)
+
+- After asking how to derive a direction between `Vector2I` cells, the learner reported `Done`. Explained target-minus-attacker subtraction, which is already unit length for orthogonally adjacent attack cells; normalization after converting to `Vector2` applies for arbitrary distances. Inspected the updated `Main.cs` and `Actor.cs`. No explicit timing observations were supplied and no independent build/run was performed.
+- `AnimateAttack()` now uses `target.GridPosition - attacker.GridPosition` and captures/tweens/restores the target child's `SelfModulate`. The two parallel pairs, captured resting values, 18-pixel amplitude, and 0.1-second phases are retained. The remaining presentation-alignment items are resolved by source inspection.
+- Each action now selects an animation via `Func<Task>`, then runs shared `ChangeTurn(nextTurn)`, `PrintGameState()`, and `UpdateLabels()` before `await animate()`. This correctly commits damage/fatal state and displays HP/results before an attack effect begins.
+- That shared state transition is unconditional, so nonfatal attacks and moves also hand over early. During the player's effect `_gameState` already says `EnemyTurn`; during a nonfatal enemy effect it already says `PlayerTurn`, and the status label reflects that premature handoff. The existing semaphore still excludes input and the caller still awaits each actor action, so this is a state/status timing problem, not evidence of overlapping actor actions.
+- The remaining adjustment is to commit only terminal results before the await and normal handoffs afterward, in both action methods. The learner's delegate-based animation selection is compatible with that policy and need not be replaced.
+
+**Completion checks:** temporarily use 0.8-second movement and 0.4-second attack phases:
+
+1. From a fresh run, Right keeps `PlayerTurn` until the player's arrival, then `EnemyTurn` until the enemy's arrival. Check transition logs or inspect `_gameState`; the enemy action still starts only after the player arrives.
+2. The second Right displays enemy HP 2 at player-attack start while retaining `PlayerTurn` until the full return phase ends. The enemy attack then displays player HP 2 immediately and retains `EnemyTurn` until its return ends. Status updates to the next turn after each nonfatal effect.
+3. Continue to the fourth accepted Right: HP 1/0 and `You win` appear at fatal-effect start, with `_gameState` already `FinishedDuel`. The effect finishes with no enemy response or normal handoff. Input is discarded throughout both phases; settled U/Y still restores the 1/1 playable state and 1/0 win without effects.
+
+Restore movement to 0.2 seconds and attack phases to 0.1 seconds. Report the observed transition timing with completion.
+
+### Handoff follow-up review (2026-11-06)
+
+- The learner reported `Done`. Inspected `Main.cs` and `Actor.cs`; no explicit per-scenario observations were supplied and no independent build/run was performed.
+- Both action methods now apply fatal `FinishedDuel` immediately, await the selected movement/attack directly in its branch, and perform a normal handoff afterward only when `_gameState is not FinishedDuel`. This resolves early normal handoff for both movement and nonfatal attacks while preserving the terminal result and defeated-enemy guard.
+- `ChangeTurn()` now calls `PrintGameState()` and `UpdateLabels()`. This displays fatal damage/result immediately and refreshes status at normal handoff, but a nonfatal attack has no label refresh between `DealDamage()` and `await AnimateAttack(...)`. Thus nonfatal HP remains visually stale through the effect. The remaining issue is display refresh, not damage or turn timing.
+- Logical attack direction, child-local two-phase feedback, input exclusion, and settled snapshot restoration remain consistent by source inspection. Movement/attack phase durations are 0.2/0.1 seconds.
+
+## Completed exercise — refresh nonfatal HP at attack start
+
+Refresh labels after damage/defeat checking and before the effect, including when the target survives. The follow-up first corrected `EnemyAction()`, then applied the same nonfatal refresh in `PlayerAction()` before `await AnimateAttack(Player, Enemy)`. The existing post-effect normal handoff remains the correct transition boundary.
+
+**Purpose:** reflect a gameplay-data change even when turn ownership has not changed; label refresh must not depend exclusively on a state transition.
+
+**Completion check:** temporarily use 0.4-second attack phases. From a fresh run, press Right to move into adjacency, then Right to attack. Enemy HP must visibly become 2 as the player lunge starts while the turn is still `PlayerTurn`; player HP must visibly become 2 as the enemy lunge starts while the turn is still `EnemyTurn`. Both normal handoffs still occur after the corresponding return phase. Restore 0.1-second phases and report those HP timing observations.
+
+**First review (2026-11-06):** the learner reported `Done`. Source inspection confirmed `EnemyAction()` called `UpdateLabels()` in the surviving-player branch before awaiting feedback; fatal damage refreshed through `ChangeTurn()`. `PlayerAction()` lacked the corresponding nonfatal refresh, so the enemy's HP display still updated only at the end of the player's effect. Assigned the matching player-branch change and the slowed second-Right check. No explicit timing observations were supplied and no independent build/run was performed.
+
+**Completion check — met (2026-11-06):** the learner reported the remaining follow-up done. Source inspection confirms both surviving-target branches now call `UpdateLabels()` before awaiting their attack effect. Fatal transitions still refresh HP/result immediately through `ChangeTurn()`, and guarded normal handoffs occur only after the effect completes. Movement duration is 0.2 seconds and attack phases are 0.1 seconds. The two-phase child-local composition, logical-cell direction, input gate, and settled undo/redo paths remain consistent by source inspection. This completes the parallel attack-feedback exercise by source review and learner report. No explicit per-scenario runtime observations, independent build/run, or newer export/checkpoint were supplied/verified.
+
+## Completed checkpoint — choose custom Godot signals
+
+Introduce an actor-defined health-change signal so interested presentation code reacts to changed data. This builds on previously used built-in button/tween signals by declaring and emitting a custom gameplay signal. It connects directly to the completed lesson: health-display updates should follow health changes, independently of turn transitions.
+
+**Completion check — met (2026-11-06):** the learner accepted the topic. Re-read `Actor.cs` and `Main.cs`: HP is currently an auto-property assigned during actor initialization, decremented in `DealDamage()`, and assigned directly during snapshot restoration. Both attack branches explicitly refresh labels for nonfatal damage. No custom health-change signal is present at assignment time.
+
+## Completed exercise — notify health changes through a custom signal
+
+Make `Actor` announce changes to its own HP and have `Main` react by updating the existing display:
+
+- Declare a parameterless Godot signal named `HealthChanged` on `Actor`. Give HP one change pathway, such as a property setter with stored state. When the value actually changes, store the new value first, then emit once. Assigning the same HP is silent. Initialization, `DealDamage()`, and direct snapshot-restoration assignments must all use that pathway.
+- In `Main._Ready()`, after obtaining the actor and label references, subscribe once to each actor's generated `HealthChanged` event. The callback refreshes the labels from current gameplay data. It observes changes; it does not deal damage, animate, or advance turns. `Actor` owns notification and does not need label references.
+- Replace the two explicit nonfatal attack-branch `UpdateLabels()` calls with these notifications. Startup, turn/result changes, and completed snapshot restoration still require their existing explicit refreshes: these also update data that is not represented by a health-change signal. In particular, children initialize before their parent's `_Ready()`, so startup HP emission may precede `Main` subscribing.
+- Signals describe an HP value change, not an attack event. Undo/redo therefore emit when HP changes, while movement-only history navigation emits nothing. Damage/defeat timing, awaited effects, and input/history policies continue to follow the completed exercise.
+
+### Focused API hints
+
+- Godot C# declares a custom signal using `[Signal]` on a public delegate whose name ends in `EventHandler`; use `HealthChangedEventHandler` for this signal, with a `void` return and no parameters.
+- Godot generates the `HealthChanged` event for `+=` subscription and `SignalName.HealthChanged` for `EmitSignal(...)`. A build regenerates these members if tooling has not yet recognized the declaration.
+- Emit after storing HP so a synchronous subscriber reads the new value. The existing public property assignments in snapshot restoration are a useful reason to centralize emission in the setter rather than only in `DealDamage()`.
+
+**Purpose:** declare, emit, and subscribe to a custom Godot signal, separating a gameplay-data change from presentation's response and from turn transitions.
+
+**Completion checks:** temporarily log inside the signal callback to observe notifications rather than counting all label refreshes:
+
+1. From a fresh run, Right produces no health notifications; the second Right produces two, one for each damaged actor. HP displays change at the corresponding attack starts, ending at 2/2. Temporarily slow attack phases if needed to observe timing, then restore 0.1 seconds.
+2. From that 2/2 state, U restores 3/3 and Y restores 2/2, with two notifications on each navigation and no attack effects. In a fresh movement-only `Right, U, Y` sequence, there are no health notifications because HP never changes.
+3. Restart and repeat the attack cycle: notification counts must not grow from duplicate subscriptions, and initial HP still displays 3/3. Four Rights from a fresh start still display the 1/0 win at fatal-effect start; settled U/Y restores the 1/1 playable state and 1/0 win.
+
+### Submission review (2026-11-06)
+
+- The learner reported `Done`. Inspected `Actor.cs` and `Main.cs`; no notification counts or runtime logs were supplied and no independent build/run was performed.
+- `HealthPoints` now uses the learner's supported C# field-backed property syntax. The setter compares `field` with `value`, stores a changed value first, then notifies. Initialization, damage, and snapshot restoration use this property, so the intended value-change boundary is correctly centralized.
+- `Main._Ready()` subscribes once per actor after obtaining the actor/label references. Both manual nonfatal attack refresh branches are removed, while startup, turn/result, and completed restoration refreshes remain present. The handler reads gameplay data and updates presentation.
+- The `[Signal]` delegate is declared at namespace scope, outside `Actor`, and `Actor` explicitly declares `public event HealthChangedEventHandler HealthChanged`. Its setter calls `HealthChanged()` directly. This is a manually implemented C# event, not the required generated Godot signal on `Actor`. The annotated delegate must be nested in the partial Godot class; Godot generates the event and signal-name member, and emission uses `EmitSignal(...)`.
+- Direct invocation of the manual event is unsafe before a subscriber connects. In the inspected scene lifecycle, `Actor._Ready()` assigns initial HP before `Main._Ready()` subscribes, leaving the event without a listener at that assignment. This is a source-identified startup exception risk, not an independently observed runtime failure.
+- Checked the [official Godot C# signals documentation](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_signals.html), which documents generated custom-signal events and emission through `EmitSignal`, rather than direct event invocation.
+
+### Completed follow-up — use Godot's generated signal
+
+In `Actor.cs`, place the attributed `HealthChangedEventHandler` delegate inside `Actor`, remove the manually declared event so Godot can generate it, and emit `SignalName.HealthChanged` through `EmitSignal(...)` after storing changed HP. The setter's existing equality check and `Main`'s event subscriptions express the intended behavior.
+
+**Purpose:** distinguish the declaration Godot uses for signal generation from a hand-written C# event, and emit safely even when no observer is connected yet.
+
+**Completion check:** rebuild and start a fresh scene with no startup errors and 3/3 HP. Confirm the rebuilt actor exposes `HealthChanged` in the editor's Signals list. Then repeat the notification/display checks above: zero movement notifications, two for the attack cycle, two for HP-changing undo/redo, none for movement-only history, and stable counts after restart. Report the startup result and counts.
+
+**Completion check — met (2026-11-06):** the learner reported the follow-up done. Source inspection of `Actor.cs` and `Main.cs` confirms the attributed delegate is nested inside the partial `Actor` class, the hand-written event has been removed, and the setter emits through `EmitSignal(SignalName.HealthChanged)` after storing a genuinely changed value. This correctly uses Godot's generated signal/event mechanism and supports emission before any subscriber connects. `Main` subscribes once to each actor after acquiring all references; the original startup, turn/result, and completed-restoration refreshes remain present. Both attack branches rely on the health notification for nonfatal damage display. Source tracing supports zero movement-only notifications, two for the normal attack cycle, two for each HP-changing undo/redo, and fresh subscriptions after scene reload. Build/startup, editor signal visibility, and runtime checks are accepted as learner-reported completion; no explicit counts/logs or independent build/run were supplied/performed.
+
+## Completed checkpoint — choose hit-sound feedback
+
+Introduce a short hit sound using `AudioStreamPlayer`, building on custom signals with a distinction between a gameplay event and a state-change notification. `HealthChanged` also fires during undo/redo; an actual damage event should trigger hit audio, while history restoration stays silent.
+
+**Completion check — met (2026-11-06):** the learner accepted the topic. Inspected `Actor.cs`, `Actor.tscn`, and `Main.tscn`: actors expose `HealthChanged`, `DealDamage()` decrements HP through the property, and neither scene has an audio player. The exercise below introduces the damage event and sound playback. The learner chooses the sound and creates/names its source asset folder.
+
+## Current exercise — play a hit sound for actual damage
+
+Add one short hit sound shared by player and enemy attacks:
+
+- Choose a short click/impact `.wav` or `.ogg` and import it into a learner-chosen folder. Roughly 0.1–0.2 seconds is a useful starting point so successive hits are distinct. [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) is an available CC0 source; sound selection is the learner's choice. Use a non-looping clip.
+- Add an `AudioStreamPlayer` named `HitSound` under `Main`, assign the clip to `Stream`, and leave `Autoplay` off. Use `VolumeDb` to set an audible, comfortable level; approximately -12 dB is a starting point, not a required final value. This exercise uses one consistent non-positional hit sound for either actor.
+- Add a parameterless Godot `Damaged` signal inside `Actor`, using the custom-signal pattern just practiced. Emit it once from `DealDamage()` after the HP decrement, including fatal damage. `HealthChanged` still describes every HP value change; `Damaged` describes the actual damage operation and therefore is not emitted by the HP setter or snapshot restoration.
+- In `Main._Ready()`, obtain the audio-player reference and subscribe once to each actor's `Damaged` event. A parameterless handler calls the player's `Play()` method. Its optional playback-offset parameter means `Play` itself does not have a parameterless delegate signature; calling `Play()` inside the handler is sufficient.
+- Playback starts when damage is applied, alongside attack-start HP feedback. The existing tween completion remains the action-completion boundary; sound playback does not add a new await or alter turn ownership. Startup, movement, undo/redo, and scene restart must not trigger playback. History navigation need not stop an already-playing clip; the requirement is that it starts no new sound.
+
+**Purpose:** introduce audio asset playback and connect a gameplay event to feedback, distinguishing an actual hit from restoring historical HP values.
+
+**Completion checks:** listen to the running game:
+
+1. From a fresh run, startup and the first Right are silent. The second Right produces two distinct hits, one at each actor's attack start, ending at HP 2/2.
+2. After those sounds finish, U restores HP 3/3 and Y restores HP 2/2 without replaying sound. Redo deliberately lowers HP here, so it must still be silent.
+3. Four accepted Rights from a fresh run still win at HP 1/0. The fatal player attack plays one hit and grants no enemy response; the full encounter has five hits. Settled U/Y and restart trigger no sound, and a fresh attack cycle after restart still produces two hits.
+
+Report the chosen sound's project path and the listening results for source review. Implementation and runtime checks are pending.
 
 ## History
 
